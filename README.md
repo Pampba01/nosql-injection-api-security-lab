@@ -1,45 +1,43 @@
-# NoSQL Injection Attack on APIs: Coupon Manipulation Lab
+# API Security Assessment: NoSQL Injection in Coupon Validation Systems
 
-## Author
-
-Pamphyls Batila
-Email:[ps.pbatilabatila@gmail.com](mailto:ps.pbatilabatila@gmail.com)
-Location: Seattle, WA
+> ⚠️ This project was conducted in a controlled lab environment for educational and security research purposes only.
 
 ---
 
 ## Overview
 
-This project demonstrates a **NoSQL injection vulnerability** in a web application's API that allows attackers to **manipulate coupon codes and generate unauthorized discounts**.
+This project presents a security assessment of an API vulnerable to **NoSQL injection**, conducted using the intentionally vulnerable **crAPI application**. The objective was to evaluate how improper input validation in API endpoints can lead to **business logic exploitation and unauthorized financial impact**.
 
-The lab was completed as part of **CIS414 – Advanced Database Security** at Highline College and simulates a real-world API attack scenario using the vulnerable **crAPI application**.
+The assessment simulates a real-world attack scenario in which an adversary manipulates API requests to bypass coupon validation and generate fraudulent discounts.
 
 ---
 
-## Objective
+## Objectives
 
-* Identify and exploit a **NoSQL injection vulnerability** in an API endpoint
-* Manipulate coupon validation logic to generate unauthorized discounts
-* Analyze API behavior using interception and fuzzing techniques
-* Propose security mitigations to prevent similar attacks
+* Identify injection points in API request handling
+* Exploit NoSQL injection vulnerabilities in coupon validation logic
+* Analyze API response behavior to confirm exploitation
+* Assess the security and business impact of the vulnerability
+* Recommend mitigation strategies aligned with secure API design
 
 ---
 
 ## Tools & Technologies
 
-* **Burp Suite** – HTTP interception and fuzzing (Intruder)
-* **FoxyProxy** – Traffic redirection through Burp Suite
-* **Postman** – API testing and request simulation
-* **crAPI** – Vulnerable API application
+* **Burp Suite** – HTTP interception, request manipulation, fuzzing (Intruder)
+* **FoxyProxy** – Traffic routing through interception proxy
+* **Postman** – API testing and simulation
+* **crAPI Application** – Vulnerable test environment
 * **Firefox Browser**
+* **NoSQL Payloads** – `$gt`, `$nin`, `$ne`, `$regex`
 
 ---
 
 ## Attack Summary
 
-The application’s coupon system failed to properly validate user input, allowing injection of **NoSQL query operators** into API requests.
+The API’s coupon validation mechanism failed to properly validate and sanitize user input. This allowed injection of **NoSQL query operators** into API requests.
 
-By modifying the coupon request payload, it was possible to:
+By manipulating the coupon parameter, it was possible to:
 
 * Bypass validation logic
 * Retrieve valid coupon data
@@ -47,21 +45,19 @@ By modifying the coupon request payload, it was possible to:
 
 ---
 
-## Step-by-Step Exploitation
+## Methodology
 
-### 1. Intercept API Request
+### 1. Interception & Traffic Analysis
 
-* Enabled FoxyProxy to route traffic through Burp Suite
-* Captured coupon request from the application
+Traffic was routed through Burp Suite using FoxyProxy, allowing interception of coupon-related HTTP requests.
 
-### 2. Identify Injection Point
+### 2. Request Inspection
 
-* Located the `coupon code` field in the POST request body
+The POST request body was analyzed to identify the `coupon` parameter as a potential injection point.
 
-### 3. Fuzz Input with Payloads
+### 3. Payload Injection & Fuzzing
 
-* Sent request to **Burp Intruder**
-* Injected NoSQL payloads into the coupon field
+Burp Suite Intruder was used to test multiple SQL and NoSQL payloads against the coupon field.
 
 Example payloads:
 
@@ -70,117 +66,116 @@ Example payloads:
 {"$nin":[1]}
 ```
 
----
+### 4. Response Analysis & Refinement
 
-### 4. Analyze Responses
+Different payload configurations produced distinct server responses:
 
-* Initial responses returned **500 errors**
-* After modifying payload encoding:
+* **HTTP 500** → improper error handling
+* **HTTP 422** → syntax validation failure
+* **HTTP 200** → successful execution
 
-  * Received **422 (syntax errors)** → confirmed injection point
-* Adjusted payload placement within JSON structure
+Payload encoding and placement were adjusted to achieve successful injection.
 
----
+### 5. Exploitation
 
-### 5. Successful Exploitation
-
-* Received **HTTP 200 responses** indicating valid execution
-* Extracted valid coupon data from API response
+Successful payloads returned valid coupon data. Extracted coupon codes were applied to the application, resulting in unauthorized account balance increases.
 
 ---
 
-### 6. Impact
+## Key Findings
 
-* Applied extracted coupon code (`TRAC075`)
-* Balance increased from **$5100 → $5175**
-* Demonstrated **unauthorized financial gain via API abuse**
+* The API failed to properly validate and sanitize user input
+* NoSQL operators bypassed coupon validation logic
+* Response patterns (500 → 422 → 200) revealed exploitable conditions
+* Sensitive coupon data was exposed via API responses
+* Business logic could be manipulated for financial gain
 
 ---
 
-## ⚠️ Vulnerability Details
+## Evidence of Exploitation
 
-The API failed to:
+The full report includes screenshots demonstrating:
 
-* Validate user input properly
-* Sanitize NoSQL query operators
-* Enforce strict schema validation
+* Intercepted HTTP requests in Burp Suite
+* Intruder payload configuration and fuzzing results
+* Response variations indicating successful injection
+* Extracted coupon data from API responses
+* Successful exploitation (balance increase from **$5100 → $5175**)
 
-This allowed attackers to inject operators like:
-
-* `$gt` (greater than)
-* `$nin` (not in list)
+📄 Full detailed report:
+`/docs/NoSQL-Injection-Lab-Report.pdf`
 
 ---
 
 ## Security Impact
 
-This vulnerability could allow attackers to:
+This vulnerability introduces significant risks:
 
-* Manipulate financial transactions
-* Bypass business logic
-* Access or modify sensitive data
-* Automate exploitation at scale
+* **Unauthorized Access** – Retrieval of valid coupon data
+* **Business Logic Abuse** – Fraudulent financial transactions
+* **Data Exposure** – Leakage of sensitive API responses
+* **Scalability of Attacks** – Potential for automated exploitation
 
 ---
 
 ## Recommended Mitigations
 
-* **Input Validation**
+### Input Security
 
-  * Strictly validate and sanitize all API inputs
-  * Reject special operators in user-controlled fields
+* Enforce strict input validation and sanitization
+* Reject NoSQL operators in user-controlled fields
 
-* **Use Parameterized Queries**
+### Secure Development
 
-  * Avoid dynamic query construction
+* Use parameterized queries or ORM frameworks
+* Implement strict API schema validation (JSON schema)
 
-* **Schema Enforcement**
+### Authentication & Transport Security
 
-  * Enforce strict JSON schema validation
+* Apply OAuth 2.0 for authorization
+* Use secure JWT handling
+* Enforce HTTPS/TLS encryption
 
-* **Authentication & Authorization**
+### API Hardening
 
-  * Implement **OAuth 2.0**
-  * Use **JWT tokens securely**
-
-* **Encryption**
-
-  * Enforce HTTPS (SSL/TLS)
-
-* **API Security Best Practices**
-
-  * Limit API responses
-  * Implement rate limiting
-  * Monitor abnormal behavior
+* Limit API response data exposure
+* Implement rate limiting and monitoring
+* Detect anomalous request patterns
 
 ---
 
-## Key Takeaways
+## Research Perspective: Input Manipulation & System Behavior
 
-* Small input validation failures can lead to **critical business logic exploits**
-* NoSQL databases are flexible—but require **strict input controls**
-* API security must be treated as a **primary attack surface**
+This project highlights how small variations in input structure can significantly impact system behavior.
+
+Observed response progression:
+
+* HTTP 500 → system instability
+* HTTP 422 → input validation boundary
+* HTTP 200 → successful exploitation
+
+Rather than a single failure point, the vulnerability emerged through **patterns of system responses**.
+
+This concept is highly relevant to **AI security**, where adversarial inputs can produce unintended or unsafe outputs. Understanding these behavioral patterns is critical for building resilient systems.
+
+---
+
+## Skills Demonstrated
+
+* API Security Testing
+* NoSQL Injection Exploitation
+* Burp Suite (Proxy, Intruder)
+* Traffic Analysis & Request Manipulation
+* Vulnerability Assessment & Reporting
+* Adversarial Testing & Pattern Analysis
 
 ---
 
 ## Future Improvements
 
-* Automate testing using Python scripts
-* Expand payload testing with larger datasets
-* Integrate findings into a detection/monitoring system (SIEM)
+* Automate injection testing using Python scripts
+* Expand testing across additional API endpoints
+* Integrate detection logic into SIEM systems
+* Explore parallels between API injection and adversarial AI inputs
 
 ---
-
-## Related Skills Demonstrated
-
-* API Security Testing
-* NoSQL Injection Exploitation
-* Burp Suite (Intruder, Proxy)
-* Threat Analysis & Vulnerability Assessment
-* Incident Documentation & Reporting
-
----
-
-## Disclaimer
-
-This project was conducted in a controlled lab environment for educational purposes only. Do not attempt these techniques on systems without proper authorization.
